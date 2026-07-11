@@ -15,8 +15,8 @@ use crate::refresh::{RefreshPriority, RefreshScheduler};
 use crate::terminal::TerminalState;
 
 pub fn run_interactive(
-    rows: u16,
-    columns: u16,
+    mut rows: u16,
+    mut columns: u16,
     command: Option<String>,
     display: &mut dyn DisplayBackend,
 ) -> Result<()> {
@@ -72,19 +72,38 @@ pub fn run_interactive(
 
     loop {
         if event::poll(Duration::from_millis(1)).context("polling keyboard input")? {
-            if let Event::Key(key) = event::read().context("reading keyboard input")? {
-                let Some(input) = map_crossterm_key(key) else {
-                    continue;
-                };
-                if input == InputEvent::Shutdown {
-                    break;
+            match event::read().context("reading terminal event")? {
+                Event::Key(key) => {
+                    let Some(input) = map_crossterm_key(key) else {
+                        continue;
+                    };
+                    if input == InputEvent::Shutdown {
+                        break;
+                    }
+                    let bytes = encode_event(&input, terminal.input_mode());
+                    if !bytes.is_empty() {
+                        writer.write_all(&bytes).context("writing input to PTY")?;
+                        writer.flush().context("flushing PTY input")?;
+                        pending_input_feedback = true;
+                    }
                 }
-                let bytes = encode_event(&input, terminal.input_mode());
-                if !bytes.is_empty() {
-                    writer.write_all(&bytes).context("writing input to PTY")?;
-                    writer.flush().context("flushing PTY input")?;
-                    pending_input_feedback = true;
+                Event::Resize(new_columns, new_rows) => {
+                    columns = new_columns;
+                    rows = new_rows;
+                    pair.master
+                        .resize(PtySize {
+                            rows,
+                            cols: columns,
+                            pixel_width: 0,
+                            pixel_height: 0,
+                        })
+                        .context("resizing PTY")?;
+                    terminal.resize(rows, columns);
+                    pending_dirty.clear();
+                    pending_dirty.push(crate::refresh::DirtyRect::full(columns, rows));
+                    scheduler.record_mutation(RefreshPriority::High);
                 }
+                _ => {}
             }
         }
 

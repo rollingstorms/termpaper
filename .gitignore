@@ -1,0 +1,6 @@
+/target/
+/frames/
+/logs/
+.env
+.env.*
+.DS_Store

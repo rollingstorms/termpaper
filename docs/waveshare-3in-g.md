@@ -23,17 +23,26 @@ Termpaper profile:
 --panel waveshare3-in-g
 ```
 
-The current renderer uses 8 x 12 pixel terminal cells, so the native panel grid
-is:
+The Waveshare backend defaults to the compact 6 x 10 pixel font, so the native
+terminal grid is:
 
 ```text
-50 columns x 14 rows
+66 columns x 16 rows
 ```
 
+The standard 8 x 12 pixel font can still be selected explicitly:
+
+```sh
+cargo run -- --display waveshare --panel waveshare3-in-g --font standard
+```
+
+That mode uses a 50 columns x 14 rows grid. The compact grid leaves a narrow
+right and bottom margin because 66 x 16 terminal cells cover 396 x 160 pixels
+inside the 400 x 168 panel.
+
 Implementation note: `epd-waveshare 0.6.0` does not currently expose a driver
-module for this exact 3-inch G / 400 x 168 four-color panel. The Waveshare
-backend must either add a controller-specific implementation or use a driver
-crate that explicitly supports this panel.
+module for this exact 3-inch G / 400 x 168 four-color panel. Termpaper includes
+a local SPI/GPIO backend ported from Waveshare's `epd3in0g` sample code.
 
 ## Hardware Test Mode
 

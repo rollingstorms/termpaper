@@ -84,9 +84,10 @@ For a Waveshare SPI e-paper HAT, the expected baseline is:
 - one or more `/dev/gpiochip*` devices exist
 - boot config includes `dtparam=spi=on`
 
-The Rust driver candidate is `epd-waveshare`, but the exact feature and panel
-module must match the physical Waveshare label. Do not wire the production
-backend until the panel model is known.
+The Waveshare backend uses a local SPI/GPIO driver for the current target panel.
+It was ported from Waveshare's `epd3in0g` sample code because `epd-waveshare
+0.6.0` does not expose a module for this exact 3-inch G / 400 x 168 four-color
+panel.
 
 Current target panel:
 
@@ -97,10 +98,10 @@ Current target panel:
 - 12 second full refresh
 - no partial refresh listed in Waveshare's selection guide
 
-With the current 8 x 12 cell renderer, the native terminal grid for this panel
-is 50 columns x 14 rows. Termpaper uses that grid automatically for
-`--display waveshare --panel waveshare3-in-g` unless `--columns` or `--rows`
-are provided explicitly.
+Termpaper defaults to the compact 6 x 10 font for
+`--display waveshare --panel waveshare3-in-g`, which gives a 66 columns x 16
+rows grid. Use `--font standard` for the original 8 x 12 font and 50 columns x
+14 rows grid.
 
 ## Sync Exclusions
 

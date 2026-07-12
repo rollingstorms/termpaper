@@ -40,8 +40,9 @@ Attempt the Waveshare backend on Raspberry Pi hardware:
 cargo run -- --display waveshare --panel waveshare3-in-g
 ```
 
-The Waveshare backend currently returns a clear unsupported/not-wired error until
-SPI/GPIO integration is implemented.
+The Waveshare backend defaults to the compact terminal font for a 66 columns x
+16 rows grid on the 400 x 168 panel. Use `--font standard` for the original 50
+columns x 14 rows grid.
 
 ## Tests
 

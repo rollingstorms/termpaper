@@ -11,7 +11,12 @@ fn main() -> Result<()> {
         return run_hardware_test(pattern);
     }
 
-    let mut display = create_backend(config.display, config.frame_dir.clone(), config.panel)?;
+    let mut display = create_backend(
+        config.display,
+        config.frame_dir.clone(),
+        config.panel,
+        config.font.metrics(),
+    )?;
     run_interactive(
         config.rows,
         config.columns,

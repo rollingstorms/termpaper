@@ -7,7 +7,9 @@ use anyhow::{bail, Context, Result};
 use crate::config::DisplayMode;
 use crate::panel::PanelModel;
 use crate::refresh::{DirtyRect, RenderSnapshot};
-use crate::render::render_snapshot_to_mono;
+#[cfg(target_os = "linux")]
+use crate::render::render_snapshot_to_mono_canvas;
+use crate::render::{render_snapshot_to_mono_with_metrics, CellMetrics};
 #[cfg(target_os = "linux")]
 use crate::waveshare3ing::pack_landscape_mono_frame;
 
@@ -54,11 +56,12 @@ pub fn create_backend(
     mode: DisplayMode,
     frame_dir: PathBuf,
     panel: PanelModel,
+    metrics: CellMetrics,
 ) -> Result<Box<dyn DisplayBackend>> {
     match mode {
-        DisplayMode::Mock => Ok(Box::new(MockDisplay::new(frame_dir)?)),
+        DisplayMode::Mock => Ok(Box::new(MockDisplay::new(frame_dir, metrics)?)),
         DisplayMode::Debug => Ok(Box::new(DebugDisplay)),
-        DisplayMode::Waveshare => Ok(Box::new(WaveshareDisplay::new(panel))),
+        DisplayMode::Waveshare => Ok(Box::new(WaveshareDisplay::new(panel, metrics))),
     }
 }
 
@@ -66,15 +69,17 @@ pub fn create_backend(
 pub struct MockDisplay {
     frame_dir: PathBuf,
     frame_index: u64,
+    metrics: CellMetrics,
 }
 
 impl MockDisplay {
-    pub fn new(frame_dir: PathBuf) -> Result<Self> {
+    pub fn new(frame_dir: PathBuf, metrics: CellMetrics) -> Result<Self> {
         fs::create_dir_all(&frame_dir)
             .with_context(|| format!("creating frame directory {}", frame_dir.display()))?;
         Ok(Self {
             frame_dir,
             frame_index: 0,
+            metrics,
         })
     }
 }
@@ -89,7 +94,7 @@ impl DisplayBackend for MockDisplay {
             .frame_dir
             .join(format!("frame-{index:06}.txt", index = self.frame_index));
 
-        let image = render_snapshot_to_mono(snapshot);
+        let image = render_snapshot_to_mono_with_metrics(snapshot, self.metrics);
 
         image
             .save(&image_path)
@@ -126,14 +131,16 @@ impl DisplayBackend for DebugDisplay {
 #[derive(Debug)]
 pub struct WaveshareDisplay {
     panel: PanelModel,
+    metrics: CellMetrics,
     #[cfg(target_os = "linux")]
     device: Option<crate::waveshare3ing::Epd3in0gDevice>,
 }
 
 impl WaveshareDisplay {
-    pub fn new(panel: PanelModel) -> Self {
+    pub fn new(panel: PanelModel, metrics: CellMetrics) -> Self {
         Self {
             panel,
+            metrics,
             #[cfg(target_os = "linux")]
             device: None,
         }
@@ -147,23 +154,29 @@ impl DisplayBackend for WaveshareDisplay {
 
     fn render(&mut self, _snapshot: &RenderSnapshot, _dirty: &[DirtyRect]) -> Result<()> {
         let profile = self.panel.profile();
+        let _metrics = self.metrics;
 
         #[cfg(target_os = "linux")]
         {
-            if _snapshot.columns != profile.terminal_columns(crate::render::CELL_WIDTH as u16)
-                || _snapshot.rows != profile.terminal_rows(crate::render::CELL_HEIGHT as u16)
-            {
+            let expected_columns = profile.terminal_columns(_metrics.width as u16);
+            let expected_rows = profile.terminal_rows(_metrics.height as u16);
+            if _snapshot.columns != expected_columns || _snapshot.rows != expected_rows {
                 bail!(
-                    "{} expects a {}x{} terminal grid with the current renderer, got {}x{}",
+                    "{} expects a {}x{} terminal grid with the selected font, got {}x{}",
                     profile.name,
-                    profile.terminal_columns(crate::render::CELL_WIDTH as u16),
-                    profile.terminal_rows(crate::render::CELL_HEIGHT as u16),
+                    expected_columns,
+                    expected_rows,
                     _snapshot.columns,
                     _snapshot.rows
                 );
             }
 
-            let frame = render_snapshot_to_mono(_snapshot);
+            let frame = render_snapshot_to_mono_canvas(
+                _snapshot,
+                _metrics,
+                profile.width_px as u32,
+                profile.height_px as u32,
+            );
             let packed = pack_landscape_mono_frame(&frame)?;
             let device = match self.device.as_mut() {
                 Some(device) => device,
@@ -192,7 +205,8 @@ mod tests {
     #[test]
     fn mock_display_writes_png_frame() {
         let dir = tempfile::tempdir().unwrap();
-        let mut display = MockDisplay::new(dir.path().to_path_buf()).unwrap();
+        let mut display =
+            MockDisplay::new(dir.path().to_path_buf(), CellMetrics::STANDARD).unwrap();
         let snapshot = RenderSnapshot {
             rows: 1,
             columns: 2,

@@ -1,7 +1,7 @@
 use vt100::Parser;
 
 use crate::input::TerminalInputMode;
-use crate::refresh::{DirtyRect, RenderSnapshot};
+use crate::refresh::{DirtyRect, RenderSnapshot, TerminalColor};
 
 pub struct TerminalState {
     parser: Parser,
@@ -55,6 +55,14 @@ impl TerminalState {
                     bold: cell.map(|cell| cell.bold()).unwrap_or(false),
                     underline: cell.map(|cell| cell.underline()).unwrap_or(false),
                     inverse: cell.map(|cell| cell.inverse()).unwrap_or(false),
+                    foreground: cell
+                        .map(|cell| cell.fgcolor())
+                        .map(TerminalColor::from)
+                        .unwrap_or_default(),
+                    background: cell
+                        .map(|cell| cell.bgcolor())
+                        .map(TerminalColor::from)
+                        .unwrap_or_default(),
                 });
             }
         }
@@ -76,6 +84,16 @@ impl TerminalState {
     }
 }
 
+impl From<vt100::Color> for TerminalColor {
+    fn from(color: vt100::Color) -> Self {
+        match color {
+            vt100::Color::Default => Self::Default,
+            vt100::Color::Idx(index) => Self::Indexed(index),
+            vt100::Color::Rgb(red, green, blue) => Self::Rgb(red, green, blue),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -94,5 +112,66 @@ mod tests {
         assert!(terminal.snapshot().alternate_screen);
         terminal.process_output(b"\x1b[?1049l");
         assert!(!terminal.snapshot().alternate_screen);
+    }
+
+    #[test]
+    fn tracks_bracketed_paste_mode() {
+        let mut terminal = TerminalState::new(2, 10);
+        terminal.process_output(b"\x1b[?2004h");
+        assert!(terminal.input_mode().bracketed_paste);
+        terminal.process_output(b"\x1b[?2004l");
+        assert!(!terminal.input_mode().bracketed_paste);
+    }
+
+    #[test]
+    fn tracks_cursor_visibility() {
+        let mut terminal = TerminalState::new(2, 10);
+        terminal.process_output(b"\x1b[?25l");
+        assert!(!terminal.snapshot().cursor_visible);
+        terminal.process_output(b"\x1b[?25h");
+        assert!(terminal.snapshot().cursor_visible);
+    }
+
+    #[test]
+    fn tracks_text_attributes_and_colors() {
+        let mut terminal = TerminalState::new(2, 10);
+        terminal.process_output(b"\x1b[1;4;7;31;47mX");
+        let snapshot = terminal.snapshot();
+        let cell = &snapshot.cells[0];
+
+        assert!(cell.bold);
+        assert!(cell.underline);
+        assert!(cell.inverse);
+        assert_eq!(cell.foreground, TerminalColor::Indexed(1));
+        assert_eq!(cell.background, TerminalColor::Indexed(7));
+    }
+
+    #[test]
+    fn clears_screen_content() {
+        let mut terminal = TerminalState::new(2, 5);
+        terminal.process_output(b"hello\x1b[2J\x1b[H");
+        assert_eq!(terminal.contents().trim(), "");
+    }
+
+    #[test]
+    fn inserts_and_deletes_lines() {
+        let mut terminal = TerminalState::new(4, 5);
+        terminal.process_output(b"one\r\ntwo\r\nthree\x1b[2;1H\x1b[Lnew");
+        assert!(terminal.contents().contains("new"));
+        assert!(terminal.contents().contains("two"));
+
+        terminal.process_output(b"\x1b[2;1H\x1b[M");
+        assert!(!terminal.contents().contains("new"));
+    }
+
+    #[test]
+    fn scroll_region_limits_scrolling() {
+        let mut terminal = TerminalState::new(4, 5);
+        terminal.process_output(b"top\r\none\r\ntwo\r\nbot");
+        terminal.process_output(b"\x1b[2;3r\x1b[3;1H\n");
+        let contents = terminal.contents();
+
+        assert!(contents.contains("top"));
+        assert!(contents.contains("bot"));
     }
 }

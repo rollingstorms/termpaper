@@ -169,7 +169,7 @@ impl DisplayBackend for WaveshareDisplay {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::refresh::RenderCell;
+    use crate::refresh::{RenderCell, TerminalColor};
 
     #[test]
     fn mock_display_writes_png_frame() {
@@ -184,12 +184,16 @@ mod tests {
                     bold: true,
                     underline: false,
                     inverse: false,
+                    foreground: TerminalColor::Default,
+                    background: TerminalColor::Default,
                 },
                 RenderCell {
                     text: "K".to_string(),
                     bold: false,
                     underline: true,
                     inverse: false,
+                    foreground: TerminalColor::Default,
+                    background: TerminalColor::Default,
                 },
             ],
             cursor_row: 0,

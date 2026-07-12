@@ -11,7 +11,7 @@ use portable_pty::{native_pty_system, CommandBuilder, PtySize};
 
 use crate::display::DisplayBackend;
 use crate::input::{encode_event, InputEvent, Key, KeyEvent, Modifiers};
-use crate::refresh::{RefreshPriority, RefreshScheduler};
+use crate::refresh::{coalesce_dirty_rects, RefreshPriority, RefreshScheduler};
 use crate::terminal::TerminalState;
 
 pub fn run_interactive(
@@ -129,6 +129,7 @@ pub fn run_interactive(
         }
 
         if !pending_dirty.is_empty() && scheduler.should_refresh(Instant::now()) {
+            coalesce_dirty_rects(&mut pending_dirty);
             display.render(&terminal.snapshot(), &pending_dirty)?;
             pending_dirty.clear();
         }
@@ -139,6 +140,7 @@ pub fn run_interactive(
             .is_some()
         {
             if !pending_dirty.is_empty() {
+                coalesce_dirty_rects(&mut pending_dirty);
                 display.render(&terminal.snapshot(), &pending_dirty)?;
             }
             break;

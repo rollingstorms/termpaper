@@ -20,7 +20,7 @@ pub const LANDSCAPE_WIDTH: u16 = 400;
 pub const LANDSCAPE_HEIGHT: u16 = 168;
 pub const PACKED_BUFFER_LEN: usize = (PANEL_WIDTH as usize * PANEL_HEIGHT as usize) / 4;
 #[cfg(target_os = "linux")]
-const SPI_CHUNK_SIZE: usize = 4096;
+const SPI_CHUNK_SIZE: usize = 1;
 #[cfg(target_os = "linux")]
 const STARTUP_WHITE_CLEAR_PASSES: u8 = 3;
 
@@ -200,15 +200,15 @@ impl Epd3in0gDevice {
 
     fn reset(&mut self) {
         self.reset.set_high();
-        std::thread::sleep(Duration::from_millis(20));
+        std::thread::sleep(Duration::from_millis(200));
         self.reset.set_low();
         std::thread::sleep(Duration::from_millis(2));
         self.reset.set_high();
-        std::thread::sleep(Duration::from_millis(20));
+        std::thread::sleep(Duration::from_millis(200));
     }
 
     fn turn_on_display(&mut self) -> Result<()> {
-        self.command_with_data(0x12, &[0x00])?;
+        self.command_with_data(0x12, &[0x01])?;
         self.wait_busy_high(Duration::from_secs(30))?;
         self.command_with_data(0x02, &[0x00])?;
         self.wait_busy_high(Duration::from_secs(20))

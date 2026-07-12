@@ -7,6 +7,8 @@ use crate::config::DisplayMode;
 use crate::panel::PanelModel;
 use crate::refresh::{DirtyRect, RenderSnapshot};
 use crate::render::render_snapshot_to_mono;
+#[cfg(target_os = "linux")]
+use crate::waveshare3ing::pack_landscape_mono_frame;
 
 pub trait DisplayBackend {
     fn render(&mut self, snapshot: &RenderSnapshot, dirty: &[DirtyRect]) -> Result<()>;
@@ -88,11 +90,17 @@ impl DisplayBackend for DebugDisplay {
 #[derive(Debug)]
 pub struct WaveshareDisplay {
     panel: PanelModel,
+    #[cfg(target_os = "linux")]
+    device: Option<crate::waveshare3ing::Epd3in0gDevice>,
 }
 
 impl WaveshareDisplay {
     pub fn new(panel: PanelModel) -> Self {
-        Self { panel }
+        Self {
+            panel,
+            #[cfg(target_os = "linux")]
+            device: None,
+        }
     }
 }
 
@@ -101,15 +109,32 @@ impl DisplayBackend for WaveshareDisplay {
         let profile = self.panel.profile();
 
         #[cfg(target_os = "linux")]
-        bail!(
-            "{} backend is not wired yet: {}x{}, {}, full refresh {}s, partial refresh supported={}. Use --display mock or --display debug.",
-            profile.name,
-            profile.width_px,
-            profile.height_px,
-            profile.interface,
-            profile.full_refresh_seconds,
-            profile.partial_refresh
-        );
+        {
+            if _snapshot.columns != profile.terminal_columns(crate::render::CELL_WIDTH as u16)
+                || _snapshot.rows != profile.terminal_rows(crate::render::CELL_HEIGHT as u16)
+            {
+                bail!(
+                    "{} expects a {}x{} terminal grid with the current renderer, got {}x{}",
+                    profile.name,
+                    profile.terminal_columns(crate::render::CELL_WIDTH as u16),
+                    profile.terminal_rows(crate::render::CELL_HEIGHT as u16),
+                    _snapshot.columns,
+                    _snapshot.rows
+                );
+            }
+
+            let frame = render_snapshot_to_mono(_snapshot);
+            let packed = pack_landscape_mono_frame(&frame)?;
+            let device = match self.device.as_mut() {
+                Some(device) => device,
+                None => {
+                    let mut device = crate::waveshare3ing::Epd3in0gDevice::open_default()?;
+                    device.init()?;
+                    self.device.insert(device)
+                }
+            };
+            device.display_packed(&packed)
+        }
 
         #[cfg(not(target_os = "linux"))]
         bail!(

@@ -6,3 +6,4 @@ pub mod pty;
 pub mod refresh;
 pub mod render;
 pub mod terminal;
+pub mod waveshare3ing;

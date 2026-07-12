@@ -101,6 +101,7 @@ scripts/test-pi.sh
 scripts/install-service.sh
 scripts/restart-service.sh
 scripts/logs-pi.sh --follow
+scripts/hardware-info-pi.sh
 ```
 
 GitHub is the authoritative source repository, but rapid hardware iteration can

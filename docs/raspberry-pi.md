@@ -55,6 +55,25 @@ scripts/bootstrap-pi.sh --install-system-deps
 
 That install mode may prompt for sudo on the Pi.
 
+## Hardware Audit
+
+Inspect non-destructive hardware readiness details:
+
+```sh
+scripts/hardware-info-pi.sh
+```
+
+For a Waveshare SPI e-paper HAT, the expected baseline is:
+
+- the user belongs to the `spi` and `gpio` groups
+- `/dev/spidev0.0` exists
+- one or more `/dev/gpiochip*` devices exist
+- boot config includes `dtparam=spi=on`
+
+The Rust driver candidate is `epd-waveshare`, but the exact feature and panel
+module must match the physical Waveshare label. Do not wire the production
+backend until the panel model is known.
+
 ## Sync Exclusions
 
 `scripts/sync-pi.sh` excludes:

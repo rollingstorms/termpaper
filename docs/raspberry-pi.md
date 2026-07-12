@@ -69,6 +69,14 @@ Run a direct full-refresh test pattern:
 scripts/hardware-test-pi.sh text
 ```
 
+Run noninteractive command smoke tests through Termpaper:
+
+```sh
+scripts/command-smoke-pi.sh --display mock
+```
+
+Use `--display waveshare` only when you want slow full-panel refreshes.
+
 For a Waveshare SPI e-paper HAT, the expected baseline is:
 
 - the user belongs to the `spi` and `gpio` groups

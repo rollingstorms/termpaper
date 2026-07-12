@@ -30,10 +30,7 @@ pub fn run_interactive(
         })
         .context("opening PTY")?;
 
-    let shell = command
-        .or_else(|| env::var("SHELL").ok())
-        .unwrap_or_else(|| "/bin/sh".to_string());
-    let mut cmd = CommandBuilder::new(shell);
+    let mut cmd = command_builder(command);
     cmd.env("TERM", "vt100");
     cmd.env("TERMPAPER", "1");
 
@@ -157,6 +154,28 @@ pub fn run_interactive(
     Ok(())
 }
 
+fn command_builder(command: Option<String>) -> CommandBuilder {
+    match command {
+        Some(command) if command_contains_shell_syntax(&command) => {
+            let mut builder = CommandBuilder::new("/bin/sh");
+            builder.args(["-lc", command.as_str()]);
+            builder
+        }
+        Some(command) => CommandBuilder::new(command),
+        None => CommandBuilder::new(env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string())),
+    }
+}
+
+fn command_contains_shell_syntax(command: &str) -> bool {
+    command.chars().any(char::is_whitespace)
+        || command.chars().any(|ch| {
+            matches!(
+                ch,
+                '|' | '&' | ';' | '<' | '>' | '*' | '?' | '$' | '\'' | '"'
+            )
+        })
+}
+
 fn map_crossterm_key(key: crossterm::event::KeyEvent) -> Option<InputEvent> {
     let modifiers = Modifiers {
         control: key.modifiers.contains(KeyModifiers::CONTROL),
@@ -192,5 +211,18 @@ struct RawModeGuard;
 impl Drop for RawModeGuard {
     fn drop(&mut self) {
         let _ = disable_raw_mode();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn detects_shell_command_strings() {
+        assert!(!command_contains_shell_syntax("/bin/ls"));
+        assert!(command_contains_shell_syntax("ls -la"));
+        assert!(command_contains_shell_syntax("printf hello; true"));
+        assert!(command_contains_shell_syntax("echo $SHELL"));
     }
 }

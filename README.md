@@ -103,6 +103,7 @@ scripts/restart-service.sh
 scripts/logs-pi.sh --follow
 scripts/hardware-info-pi.sh
 scripts/hardware-test-pi.sh text
+scripts/command-smoke-pi.sh --display mock
 ```
 
 GitHub is the authoritative source repository, but rapid hardware iteration can

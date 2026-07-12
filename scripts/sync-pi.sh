@@ -24,7 +24,7 @@ require_pi_config
 
 ssh "${PI_HOST}" "mkdir -p '${PI_DIR}'"
 
-rsync -az --delete "${DRY_RUN[@]}" \
+rsync -az --delete ${DRY_RUN+"${DRY_RUN[@]}"} \
   --exclude '.git/' \
   --exclude 'target/' \
   --exclude '.env' \

@@ -38,6 +38,23 @@ Do not commit the sibling `altoids` folder to this repository. It is for local
 execution details and any setup notes that should not be published with
 Termpaper.
 
+## Bootstrap
+
+Audit the Pi without installing anything:
+
+```sh
+scripts/bootstrap-pi.sh
+```
+
+If ordinary Rust build dependencies are missing and you want the script to
+install them with apt:
+
+```sh
+scripts/bootstrap-pi.sh --install-system-deps
+```
+
+That install mode may prompt for sudo on the Pi.
+
 ## Sync Exclusions
 
 `scripts/sync-pi.sh` excludes:

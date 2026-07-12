@@ -13,7 +13,7 @@ not conflict with the installed service.
 USAGE
 }
 
-FONT="compact"
+FONT="standard"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --font)

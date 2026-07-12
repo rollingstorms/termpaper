@@ -23,22 +23,26 @@ Termpaper profile:
 --panel waveshare3-in-g
 ```
 
-The Waveshare backend defaults to the compact 6 x 10 pixel font, so the native
+The Waveshare backend defaults to the standard 8 x 12 pixel font, so the native
 terminal grid is:
 
 ```text
-66 columns x 16 rows
+50 columns x 14 rows
 ```
 
-The standard 8 x 12 pixel font can still be selected explicitly:
+The denser compact 6 x 10 pixel font can still be selected explicitly:
 
 ```sh
-cargo run -- --display waveshare --panel waveshare3-in-g --font standard
+cargo run -- --display waveshare --panel waveshare3-in-g --font compact
 ```
 
-That mode uses a 50 columns x 14 rows grid. The compact grid leaves a narrow
+That mode uses a 66 columns x 16 rows grid. The compact grid leaves a narrow
 right and bottom margin because 66 x 16 terminal cells cover 396 x 160 pixels
 inside the 400 x 168 panel.
+
+The driver sends a white clear before the first frame after initialization. That
+extra refresh helps remove stale red/yellow pigment before monochrome terminal
+content is drawn.
 
 Implementation note: `epd-waveshare 0.6.0` does not currently expose a driver
 module for this exact 3-inch G / 400 x 168 four-color panel. Termpaper includes

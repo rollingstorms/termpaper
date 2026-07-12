@@ -94,6 +94,7 @@ pub struct Epd3in0gDevice {
     reset: rppal::gpio::OutputPin,
     dc: rppal::gpio::OutputPin,
     busy: rppal::gpio::InputPin,
+    needs_white_clear: bool,
     sleeping: bool,
 }
 
@@ -124,6 +125,7 @@ impl Epd3in0gDevice {
             reset,
             dc,
             busy,
+            needs_white_clear: true,
             sleeping: false,
         })
     }
@@ -153,6 +155,10 @@ impl Epd3in0gDevice {
             );
         }
 
+        if self.needs_white_clear {
+            self.clear(Epd3in0gColor::White)?;
+        }
+
         self.command(0x04)?;
         self.wait_busy_high(Duration::from_secs(20))?;
         self.command_with_data(0x10, packed)?;
@@ -167,7 +173,9 @@ impl Epd3in0gDevice {
         for _ in 0..PANEL_HEIGHT {
             self.data(&line)?;
         }
-        self.turn_on_display()
+        self.turn_on_display()?;
+        self.needs_white_clear = false;
+        Ok(())
     }
 
     pub fn sleep(&mut self) -> Result<()> {

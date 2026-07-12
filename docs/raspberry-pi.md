@@ -72,11 +72,11 @@ scripts/hardware-test-pi.sh text
 Run noninteractive command smoke tests through Termpaper:
 
 ```sh
-scripts/command-smoke-pi.sh --display mock --font compact
+scripts/command-smoke-pi.sh --display mock
 ```
 
 Use `--display waveshare` only when you want slow full-panel refreshes. Use
-`--font standard` when comparing against the original 50 columns x 14 rows grid.
+`--font compact` when comparing against the denser 66 columns x 16 rows grid.
 
 When running interactively, `Ctrl-]` stops Termpaper locally and terminates the
 child shell. `Ctrl-C` and `Ctrl-D` are forwarded to the shell.
@@ -102,10 +102,14 @@ Current target panel:
 - 12 second full refresh
 - no partial refresh listed in Waveshare's selection guide
 
-Termpaper defaults to the compact 6 x 10 font for
-`--display waveshare --panel waveshare3-in-g`, which gives a 66 columns x 16
-rows grid. Use `--font standard` for the original 8 x 12 font and 50 columns x
-14 rows grid.
+Termpaper defaults to the standard 8 x 12 font for
+`--display waveshare --panel waveshare3-in-g`, which gives a 50 columns x 14
+rows grid. Use `--font compact` for the denser 6 x 10 font and 66 columns x 16
+rows grid.
+
+The first frame after display initialization performs an extra white clear. This
+is intentional; it helps remove stale red/yellow pigment before drawing
+monochrome terminal content.
 
 ## Sync Exclusions
 

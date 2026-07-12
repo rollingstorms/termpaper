@@ -73,7 +73,7 @@ impl From<Cli> for RuntimeConfig {
     fn from(cli: Cli) -> Self {
         let profile = cli.panel.profile();
         let font = cli.font.unwrap_or(match cli.display {
-            DisplayMode::Waveshare => TerminalFont::Compact,
+            DisplayMode::Waveshare => TerminalFont::Standard,
             DisplayMode::Mock | DisplayMode::Debug => TerminalFont::Standard,
         });
         let metrics = font.metrics();
@@ -105,7 +105,7 @@ mod tests {
     use crate::render::{CELL_HEIGHT, CELL_WIDTH, COMPACT_CELL_HEIGHT, COMPACT_CELL_WIDTH};
 
     #[test]
-    fn waveshare_defaults_to_compact_native_grid() {
+    fn waveshare_defaults_to_standard_native_grid() {
         let config = RuntimeConfig::from(Cli {
             display: DisplayMode::Waveshare,
             columns: None,
@@ -117,25 +117,25 @@ mod tests {
             hardware_test: None,
         });
 
-        assert_eq!(config.font, TerminalFont::Compact);
-        assert_eq!(config.columns, (400 / COMPACT_CELL_WIDTH) as u16);
-        assert_eq!(config.rows, (168 / COMPACT_CELL_HEIGHT) as u16);
+        assert_eq!(config.font, TerminalFont::Standard);
+        assert_eq!(config.columns, (400 / CELL_WIDTH) as u16);
+        assert_eq!(config.rows, (168 / CELL_HEIGHT) as u16);
     }
 
     #[test]
-    fn standard_font_keeps_original_waveshare_grid() {
+    fn compact_font_uses_denser_waveshare_grid() {
         let config = RuntimeConfig::from(Cli {
             display: DisplayMode::Waveshare,
             columns: None,
             rows: None,
             panel: PanelModel::Waveshare3InG,
-            font: Some(TerminalFont::Standard),
+            font: Some(TerminalFont::Compact),
             frame_dir: "frames".into(),
             command: None,
             hardware_test: None,
         });
 
-        assert_eq!(config.columns, (400 / CELL_WIDTH) as u16);
-        assert_eq!(config.rows, (168 / CELL_HEIGHT) as u16);
+        assert_eq!(config.columns, (400 / COMPACT_CELL_WIDTH) as u16);
+        assert_eq!(config.rows, (168 / COMPACT_CELL_HEIGHT) as u16);
     }
 }

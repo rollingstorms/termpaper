@@ -40,9 +40,9 @@ Attempt the Waveshare backend on Raspberry Pi hardware:
 cargo run -- --display waveshare --panel waveshare3-in-g
 ```
 
-The Waveshare backend defaults to the compact terminal font for a 66 columns x
-16 rows grid on the 400 x 168 panel. Use `--font standard` for the original 50
-columns x 14 rows grid.
+The Waveshare backend defaults to the standard terminal font for a 50 columns x
+14 rows grid on the 400 x 168 panel. Use `--font compact` for the denser 66
+columns x 16 rows grid.
 
 ## Tests
 
@@ -97,14 +97,14 @@ scripts/bootstrap-pi.sh
 scripts/sync-pi.sh --dry-run
 scripts/sync-pi.sh
 scripts/build-pi.sh
-scripts/run-pi.sh --font compact
+scripts/run-pi.sh
 scripts/test-pi.sh
 scripts/install-service.sh
 scripts/restart-service.sh
 scripts/logs-pi.sh --follow
 scripts/hardware-info-pi.sh
 scripts/hardware-test-pi.sh text
-scripts/command-smoke-pi.sh --display mock --font compact
+scripts/command-smoke-pi.sh --display mock
 ```
 
 In an interactive Pi session, press `Ctrl-]` to stop Termpaper locally and

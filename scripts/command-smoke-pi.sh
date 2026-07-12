@@ -13,7 +13,7 @@ USAGE
 }
 
 DISPLAY="mock"
-FONT="compact"
+FONT="standard"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --display)

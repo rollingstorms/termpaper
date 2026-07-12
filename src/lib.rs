@@ -1,5 +1,6 @@
 pub mod config;
 pub mod display;
+pub mod hardware_test;
 pub mod input;
 pub mod panel;
 pub mod pty;

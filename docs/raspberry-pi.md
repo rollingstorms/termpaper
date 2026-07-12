@@ -63,6 +63,12 @@ Inspect non-destructive hardware readiness details:
 scripts/hardware-info-pi.sh
 ```
 
+Run a direct full-refresh test pattern:
+
+```sh
+scripts/hardware-test-pi.sh text
+```
+
 For a Waveshare SPI e-paper HAT, the expected baseline is:
 
 - the user belongs to the `spi` and `gpio` groups

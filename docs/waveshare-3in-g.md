@@ -34,3 +34,25 @@ Implementation note: `epd-waveshare 0.6.0` does not currently expose a driver
 module for this exact 3-inch G / 400 x 168 four-color panel. The Waveshare
 backend must either add a controller-specific implementation or use a driver
 crate that explicitly supports this panel.
+
+## Hardware Test Mode
+
+Run one direct full-panel test refresh:
+
+```sh
+scripts/hardware-test-pi.sh text
+```
+
+Available patterns:
+
+- `white`
+- `black`
+- `border`
+- `checkerboard`
+- `text`
+
+Equivalent direct command on the Pi:
+
+```sh
+cargo run -- --display waveshare --panel waveshare3-in-g --hardware-test text
+```

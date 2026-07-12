@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use clap::{Parser, ValueEnum};
 
+use crate::hardware_test::HardwareTestPattern;
 use crate::panel::PanelModel;
 use crate::render::{CELL_HEIGHT, CELL_WIDTH};
 
@@ -26,6 +27,9 @@ pub struct Cli {
 
     #[arg(long)]
     pub command: Option<String>,
+
+    #[arg(long, value_enum)]
+    pub hardware_test: Option<HardwareTestPattern>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
@@ -43,6 +47,7 @@ pub struct RuntimeConfig {
     pub panel: PanelModel,
     pub frame_dir: PathBuf,
     pub command: Option<String>,
+    pub hardware_test: Option<HardwareTestPattern>,
 }
 
 impl From<Cli> for RuntimeConfig {
@@ -64,6 +69,7 @@ impl From<Cli> for RuntimeConfig {
             panel: cli.panel,
             frame_dir: cli.frame_dir,
             command: cli.command,
+            hardware_test: cli.hardware_test,
         }
     }
 }

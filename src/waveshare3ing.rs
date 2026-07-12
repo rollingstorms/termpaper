@@ -94,6 +94,7 @@ pub struct Epd3in0gDevice {
     reset: rppal::gpio::OutputPin,
     dc: rppal::gpio::OutputPin,
     busy: rppal::gpio::InputPin,
+    sleeping: bool,
 }
 
 #[cfg(target_os = "linux")]
@@ -123,10 +124,12 @@ impl Epd3in0gDevice {
             reset,
             dc,
             busy,
+            sleeping: false,
         })
     }
 
     pub fn init(&mut self) -> Result<()> {
+        self.sleeping = false;
         self.reset();
         self.command_with_data(0x66, &[0x49, 0x55, 0x13, 0x5D, 0x05, 0x10])?;
         self.command_with_data(0xB0, &[0x00])?;
@@ -168,8 +171,13 @@ impl Epd3in0gDevice {
     }
 
     pub fn sleep(&mut self) -> Result<()> {
+        if self.sleeping {
+            return Ok(());
+        }
         self.command_with_data(0x02, &[0x00])?;
-        self.command_with_data(0x07, &[0xA5])
+        self.command_with_data(0x07, &[0xA5])?;
+        self.sleeping = true;
+        Ok(())
     }
 
     fn reset(&mut self) {
@@ -218,6 +226,13 @@ impl Epd3in0gDevice {
             std::thread::sleep(Duration::from_millis(5));
         }
         Ok(())
+    }
+}
+
+#[cfg(target_os = "linux")]
+impl Drop for Epd3in0gDevice {
+    fn drop(&mut self) {
+        let _ = self.sleep();
     }
 }
 

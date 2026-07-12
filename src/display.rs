@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use anyhow::{bail, Context, Result};
 
 use crate::config::DisplayMode;
+use crate::panel::PanelModel;
 use crate::refresh::{DirtyRect, RenderSnapshot};
 use crate::render::render_snapshot_to_mono;
 
@@ -11,11 +12,15 @@ pub trait DisplayBackend {
     fn render(&mut self, snapshot: &RenderSnapshot, dirty: &[DirtyRect]) -> Result<()>;
 }
 
-pub fn create_backend(mode: DisplayMode, frame_dir: PathBuf) -> Result<Box<dyn DisplayBackend>> {
+pub fn create_backend(
+    mode: DisplayMode,
+    frame_dir: PathBuf,
+    panel: PanelModel,
+) -> Result<Box<dyn DisplayBackend>> {
     match mode {
         DisplayMode::Mock => Ok(Box::new(MockDisplay::new(frame_dir)?)),
         DisplayMode::Debug => Ok(Box::new(DebugDisplay)),
-        DisplayMode::Waveshare => Ok(Box::new(WaveshareDisplay)),
+        DisplayMode::Waveshare => Ok(Box::new(WaveshareDisplay::new(panel))),
     }
 }
 
@@ -81,15 +86,36 @@ impl DisplayBackend for DebugDisplay {
 }
 
 #[derive(Debug)]
-pub struct WaveshareDisplay;
+pub struct WaveshareDisplay {
+    panel: PanelModel,
+}
+
+impl WaveshareDisplay {
+    pub fn new(panel: PanelModel) -> Self {
+        Self { panel }
+    }
+}
 
 impl DisplayBackend for WaveshareDisplay {
     fn render(&mut self, _snapshot: &RenderSnapshot, _dirty: &[DirtyRect]) -> Result<()> {
+        let profile = self.panel.profile();
+
         #[cfg(target_os = "linux")]
-        bail!("waveshare display backend is not wired to SPI/GPIO yet; use --display mock or --display debug");
+        bail!(
+            "{} backend is not wired yet: {}x{}, {}, full refresh {}s, partial refresh supported={}. Use --display mock or --display debug.",
+            profile.name,
+            profile.width_px,
+            profile.height_px,
+            profile.interface,
+            profile.full_refresh_seconds,
+            profile.partial_refresh
+        );
 
         #[cfg(not(target_os = "linux"))]
-        bail!("waveshare display backend is only supported on Linux/Raspberry Pi targets");
+        bail!(
+            "{} backend is only supported on Linux/Raspberry Pi targets",
+            profile.name
+        );
     }
 }
 

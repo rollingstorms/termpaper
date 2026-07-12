@@ -74,6 +74,20 @@ The Rust driver candidate is `epd-waveshare`, but the exact feature and panel
 module must match the physical Waveshare label. Do not wire the production
 backend until the panel model is known.
 
+Current target panel:
+
+- Waveshare SKU 22506, `3inch e-Paper (G)`
+- 400 x 168 pixels
+- SPI interface
+- red/yellow/black/white display colors
+- 12 second full refresh
+- no partial refresh listed in Waveshare's selection guide
+
+With the current 8 x 12 cell renderer, the native terminal grid for this panel
+is 50 columns x 14 rows. Termpaper uses that grid automatically for
+`--display waveshare --panel waveshare3-in-g` unless `--columns` or `--rows`
+are provided explicitly.
+
 ## Sync Exclusions
 
 `scripts/sync-pi.sh` excludes:

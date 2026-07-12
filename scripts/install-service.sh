@@ -28,7 +28,7 @@ After=network.target
 [Service]
 Type=simple
 WorkingDirectory=${PI_DIR}
-ExecStart=${PI_DIR}/target/release/termpaper --display waveshare
+ExecStart=${PI_DIR}/target/release/termpaper --display waveshare --panel waveshare3-in-g
 Restart=on-failure
 RestartSec=2
 

@@ -37,7 +37,7 @@ cargo run -- --display debug
 Attempt the Waveshare backend on Raspberry Pi hardware:
 
 ```sh
-cargo run -- --display waveshare
+cargo run -- --display waveshare --panel waveshare3-in-g
 ```
 
 The Waveshare backend currently returns a clear unsupported/not-wired error until

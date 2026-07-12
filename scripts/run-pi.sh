@@ -20,4 +20,4 @@ fi
 
 require_pi_config
 
-ssh -t "${PI_HOST}" "if systemctl is-active --quiet termpaper.service; then sudo systemctl stop termpaper.service; fi; cd '${PI_DIR}' && cargo run -- --display waveshare"
+ssh -t "${PI_HOST}" "if systemctl is-active --quiet termpaper.service; then sudo systemctl stop termpaper.service; fi; cd '${PI_DIR}' && cargo run -- --display waveshare --panel waveshare3-in-g"

@@ -6,7 +6,7 @@ use termpaper::pty::run_interactive;
 
 fn main() -> Result<()> {
     let config = RuntimeConfig::from(Cli::parse());
-    let mut display = create_backend(config.display, config.frame_dir.clone())?;
+    let mut display = create_backend(config.display, config.frame_dir.clone(), config.panel)?;
     run_interactive(
         config.rows,
         config.columns,

@@ -1,5 +1,6 @@
 use std::fs;
 use std::path::PathBuf;
+use std::time::Duration;
 
 use anyhow::{bail, Context, Result};
 
@@ -12,6 +13,41 @@ use crate::waveshare3ing::pack_landscape_mono_frame;
 
 pub trait DisplayBackend {
     fn render(&mut self, snapshot: &RenderSnapshot, dirty: &[DirtyRect]) -> Result<()>;
+
+    fn capabilities(&self) -> DisplayCapabilities {
+        DisplayCapabilities::interactive()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DisplayCapabilities {
+    pub partial_refresh: bool,
+    pub full_refresh_latency: Duration,
+    pub min_refresh_interval: Duration,
+    pub high_priority_bypasses_rate_limit: bool,
+}
+
+impl DisplayCapabilities {
+    pub fn interactive() -> Self {
+        Self {
+            partial_refresh: true,
+            full_refresh_latency: Duration::from_millis(0),
+            min_refresh_interval: Duration::from_millis(250),
+            high_priority_bypasses_rate_limit: true,
+        }
+    }
+
+    pub fn full_refresh_only(
+        full_refresh_latency: Duration,
+        min_refresh_interval: Duration,
+    ) -> Self {
+        Self {
+            partial_refresh: false,
+            full_refresh_latency,
+            min_refresh_interval,
+            high_priority_bypasses_rate_limit: false,
+        }
+    }
 }
 
 pub fn create_backend(
@@ -105,6 +141,10 @@ impl WaveshareDisplay {
 }
 
 impl DisplayBackend for WaveshareDisplay {
+    fn capabilities(&self) -> DisplayCapabilities {
+        DisplayCapabilities::full_refresh_only(Duration::from_secs(12), Duration::from_secs(12))
+    }
+
     fn render(&mut self, _snapshot: &RenderSnapshot, _dirty: &[DirtyRect]) -> Result<()> {
         let profile = self.panel.profile();
 

@@ -66,7 +66,11 @@ pub fn run_interactive(
     enable_raw_mode().context("enabling raw keyboard mode")?;
     let raw_mode = RawModeGuard;
     let mut terminal = TerminalState::new(rows, columns);
-    let mut scheduler = RefreshScheduler::new(Duration::from_millis(250));
+    let capabilities = display.capabilities();
+    let mut scheduler = RefreshScheduler::with_policy(
+        capabilities.min_refresh_interval,
+        capabilities.high_priority_bypasses_rate_limit,
+    );
     let mut pending_dirty = Vec::new();
     let mut pending_input_feedback = false;
 

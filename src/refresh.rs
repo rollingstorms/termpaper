@@ -126,14 +126,20 @@ pub enum RefreshPriority {
 #[derive(Debug)]
 pub struct RefreshScheduler {
     min_interval: Duration,
+    high_priority_bypasses_rate_limit: bool,
     last_refresh: Option<Instant>,
     pending_priority: Option<RefreshPriority>,
 }
 
 impl RefreshScheduler {
     pub fn new(min_interval: Duration) -> Self {
+        Self::with_policy(min_interval, true)
+    }
+
+    pub fn with_policy(min_interval: Duration, high_priority_bypasses_rate_limit: bool) -> Self {
         Self {
             min_interval,
+            high_priority_bypasses_rate_limit,
             last_refresh: None,
             pending_priority: None,
         }
@@ -149,7 +155,7 @@ impl RefreshScheduler {
         };
 
         let due = match (priority, self.last_refresh) {
-            (RefreshPriority::High, _) => true,
+            (RefreshPriority::High, _) if self.high_priority_bypasses_rate_limit => true,
             (_, None) => true,
             (_, Some(last)) => now.duration_since(last) >= self.min_interval,
         };
@@ -301,5 +307,16 @@ mod tests {
         assert!(!scheduler.should_refresh(now + Duration::from_secs(1)));
         scheduler.record_mutation(RefreshPriority::High);
         assert!(scheduler.should_refresh(now + Duration::from_secs(1)));
+    }
+
+    #[test]
+    fn high_priority_can_respect_rate_limit_for_slow_displays() {
+        let mut scheduler = RefreshScheduler::with_policy(Duration::from_secs(10), false);
+        let now = Instant::now();
+        scheduler.record_mutation(RefreshPriority::Normal);
+        assert!(scheduler.should_refresh(now));
+        scheduler.record_mutation(RefreshPriority::High);
+        assert!(!scheduler.should_refresh(now + Duration::from_secs(1)));
+        assert!(scheduler.should_refresh(now + Duration::from_secs(10)));
     }
 }

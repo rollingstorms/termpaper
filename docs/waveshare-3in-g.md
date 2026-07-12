@@ -40,9 +40,9 @@ That mode uses a 66 columns x 16 rows grid. The compact grid leaves a narrow
 right and bottom margin because 66 x 16 terminal cells cover 396 x 160 pixels
 inside the 400 x 168 panel.
 
-The driver sends a white clear before the first frame after initialization. That
-extra refresh helps remove stale red/yellow pigment before monochrome terminal
-content is drawn.
+The driver sends a startup white-clear cycle before the first frame after
+initialization. Those extra refreshes help remove stale red/yellow pigment before
+monochrome terminal content is drawn.
 
 Implementation note: `epd-waveshare 0.6.0` does not currently expose a driver
 module for this exact 3-inch G / 400 x 168 four-color panel. Termpaper includes

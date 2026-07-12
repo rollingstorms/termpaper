@@ -21,6 +21,8 @@ pub const LANDSCAPE_HEIGHT: u16 = 168;
 pub const PACKED_BUFFER_LEN: usize = (PANEL_WIDTH as usize * PANEL_HEIGHT as usize) / 4;
 #[cfg(target_os = "linux")]
 const SPI_CHUNK_SIZE: usize = 4096;
+#[cfg(target_os = "linux")]
+const STARTUP_WHITE_CLEAR_PASSES: u8 = 3;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
@@ -94,7 +96,7 @@ pub struct Epd3in0gDevice {
     reset: rppal::gpio::OutputPin,
     dc: rppal::gpio::OutputPin,
     busy: rppal::gpio::InputPin,
-    needs_white_clear: bool,
+    startup_white_clears_remaining: u8,
     sleeping: bool,
 }
 
@@ -125,7 +127,7 @@ impl Epd3in0gDevice {
             reset,
             dc,
             busy,
-            needs_white_clear: true,
+            startup_white_clears_remaining: STARTUP_WHITE_CLEAR_PASSES,
             sleeping: false,
         })
     }
@@ -155,8 +157,12 @@ impl Epd3in0gDevice {
             );
         }
 
-        if self.needs_white_clear {
-            self.clear(Epd3in0gColor::White)?;
+        while self.startup_white_clears_remaining > 0 {
+            self.write_solid_color(Epd3in0gColor::White)?;
+            self.startup_white_clears_remaining -= 1;
+            if self.startup_white_clears_remaining > 0 {
+                self.init()?;
+            }
         }
 
         self.command(0x04)?;
@@ -166,6 +172,12 @@ impl Epd3in0gDevice {
     }
 
     pub fn clear(&mut self, color: Epd3in0gColor) -> Result<()> {
+        self.write_solid_color(color)?;
+        self.startup_white_clears_remaining = 0;
+        Ok(())
+    }
+
+    fn write_solid_color(&mut self, color: Epd3in0gColor) -> Result<()> {
         self.command(0x04)?;
         self.wait_busy_high(Duration::from_secs(20))?;
         self.command(0x10)?;
@@ -173,9 +185,7 @@ impl Epd3in0gDevice {
         for _ in 0..PANEL_HEIGHT {
             self.data(&line)?;
         }
-        self.turn_on_display()?;
-        self.needs_white_clear = false;
-        Ok(())
+        self.turn_on_display()
     }
 
     pub fn sleep(&mut self) -> Result<()> {

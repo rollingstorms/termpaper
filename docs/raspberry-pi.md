@@ -107,9 +107,9 @@ Termpaper defaults to the standard 8 x 12 font for
 rows grid. Use `--font compact` for the denser 6 x 10 font and 66 columns x 16
 rows grid.
 
-The first frame after display initialization performs an extra white clear. This
-is intentional; it helps remove stale red/yellow pigment before drawing
-monochrome terminal content.
+The first frame after display initialization performs a startup white-clear
+cycle. This is intentional; it helps remove stale red/yellow pigment before
+drawing monochrome terminal content.
 
 ## Sync Exclusions
 

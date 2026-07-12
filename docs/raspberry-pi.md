@@ -78,6 +78,9 @@ scripts/command-smoke-pi.sh --display mock --font compact
 Use `--display waveshare` only when you want slow full-panel refreshes. Use
 `--font standard` when comparing against the original 50 columns x 14 rows grid.
 
+When running interactively, `Ctrl-]` stops Termpaper locally and terminates the
+child shell. `Ctrl-C` and `Ctrl-D` are forwarded to the shell.
+
 For a Waveshare SPI e-paper HAT, the expected baseline is:
 
 - the user belongs to the `spi` and `gpio` groups

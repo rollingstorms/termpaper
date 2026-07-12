@@ -79,6 +79,7 @@ pub fn run_interactive(
                         continue;
                     };
                     if input == InputEvent::Shutdown {
+                        child.kill().context("terminating child process")?;
                         break;
                     }
                     let bytes = encode_event(&input, terminal.input_mode());
@@ -186,6 +187,10 @@ fn map_crossterm_key(key: crossterm::event::KeyEvent) -> Option<InputEvent> {
         shift: key.modifiers.contains(KeyModifiers::SHIFT),
     };
 
+    if modifiers.control && key.code == KeyCode::Char(']') {
+        return Some(InputEvent::Shutdown);
+    }
+
     let key = match key.code {
         KeyCode::Backspace => Key::Backspace,
         KeyCode::Enter => Key::Enter,
@@ -227,5 +232,15 @@ mod tests {
         assert!(command_contains_shell_syntax("ls -la"));
         assert!(command_contains_shell_syntax("printf hello; true"));
         assert!(command_contains_shell_syntax("echo $SHELL"));
+    }
+
+    #[test]
+    fn maps_control_bracket_to_local_shutdown() {
+        let input = map_crossterm_key(crossterm::event::KeyEvent::new(
+            KeyCode::Char(']'),
+            KeyModifiers::CONTROL,
+        ));
+
+        assert_eq!(input, Some(InputEvent::Shutdown));
     }
 }

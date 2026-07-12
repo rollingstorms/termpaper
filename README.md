@@ -107,6 +107,10 @@ scripts/hardware-test-pi.sh text
 scripts/command-smoke-pi.sh --display mock --font compact
 ```
 
+In an interactive Pi session, press `Ctrl-]` to stop Termpaper locally and
+terminate the child shell. Ordinary shell controls such as `Ctrl-C` and `Ctrl-D`
+are still forwarded to the PTY.
+
 GitHub is the authoritative source repository, but rapid hardware iteration can
 use `rsync` without committing every test attempt. Commit and push meaningful
 checkpoints once they compile, pass tests, or validate on hardware.

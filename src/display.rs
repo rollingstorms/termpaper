@@ -27,6 +27,7 @@ pub struct DisplayCapabilities {
     pub full_refresh_latency: Duration,
     pub min_refresh_interval: Duration,
     pub high_priority_bypasses_rate_limit: bool,
+    pub honors_host_resize: bool,
 }
 
 impl DisplayCapabilities {
@@ -36,6 +37,7 @@ impl DisplayCapabilities {
             full_refresh_latency: Duration::from_millis(0),
             min_refresh_interval: Duration::from_millis(250),
             high_priority_bypasses_rate_limit: true,
+            honors_host_resize: true,
         }
     }
 
@@ -48,6 +50,7 @@ impl DisplayCapabilities {
             full_refresh_latency,
             min_refresh_interval,
             high_priority_bypasses_rate_limit: false,
+            honors_host_resize: false,
         }
     }
 }
@@ -201,6 +204,18 @@ impl DisplayBackend for WaveshareDisplay {
 mod tests {
     use super::*;
     use crate::refresh::{RenderCell, TerminalColor};
+
+    #[test]
+    fn slow_full_refresh_displays_keep_fixed_terminal_grid() {
+        let capabilities = DisplayCapabilities::full_refresh_only(
+            Duration::from_secs(12),
+            Duration::from_secs(12),
+        );
+
+        assert!(!capabilities.partial_refresh);
+        assert!(!capabilities.high_priority_bypasses_rate_limit);
+        assert!(!capabilities.honors_host_resize);
+    }
 
     #[test]
     fn mock_display_writes_png_frame() {

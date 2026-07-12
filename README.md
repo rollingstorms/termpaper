@@ -97,14 +97,14 @@ scripts/bootstrap-pi.sh
 scripts/sync-pi.sh --dry-run
 scripts/sync-pi.sh
 scripts/build-pi.sh
-scripts/run-pi.sh
+scripts/run-pi.sh --font compact
 scripts/test-pi.sh
 scripts/install-service.sh
 scripts/restart-service.sh
 scripts/logs-pi.sh --follow
 scripts/hardware-info-pi.sh
 scripts/hardware-test-pi.sh text
-scripts/command-smoke-pi.sh --display mock
+scripts/command-smoke-pi.sh --display mock --font compact
 ```
 
 GitHub is the authoritative source repository, but rapid hardware iteration can

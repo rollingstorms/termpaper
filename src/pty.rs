@@ -89,6 +89,9 @@ pub fn run_interactive(
                     }
                 }
                 Event::Resize(new_columns, new_rows) => {
+                    if !capabilities.honors_host_resize {
+                        continue;
+                    }
                     columns = new_columns;
                     rows = new_rows;
                     pair.master

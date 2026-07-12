@@ -72,10 +72,11 @@ scripts/hardware-test-pi.sh text
 Run noninteractive command smoke tests through Termpaper:
 
 ```sh
-scripts/command-smoke-pi.sh --display mock
+scripts/command-smoke-pi.sh --display mock --font compact
 ```
 
-Use `--display waveshare` only when you want slow full-panel refreshes.
+Use `--display waveshare` only when you want slow full-panel refreshes. Use
+`--font standard` when comparing against the original 50 columns x 14 rows grid.
 
 For a Waveshare SPI e-paper HAT, the expected baseline is:
 

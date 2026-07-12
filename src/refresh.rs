@@ -67,6 +67,7 @@ impl RenderSnapshot {
             }
         }
 
+        append_cursor_dirty_rects(self, next, &mut rects);
         rects
     }
 }
@@ -114,6 +115,45 @@ fn append_or_extend_rect(rects: &mut Vec<DirtyRect>, rect: DirtyRect) {
     }
 
     rects.push(rect);
+}
+
+fn append_cursor_dirty_rects(
+    previous: &RenderSnapshot,
+    next: &RenderSnapshot,
+    rects: &mut Vec<DirtyRect>,
+) {
+    if previous.cursor_row == next.cursor_row
+        && previous.cursor_column == next.cursor_column
+        && previous.cursor_visible == next.cursor_visible
+    {
+        return;
+    }
+
+    if previous.cursor_visible {
+        append_cursor_rect(rects, previous.cursor_column, previous.cursor_row, next);
+    }
+    if next.cursor_visible {
+        append_cursor_rect(rects, next.cursor_column, next.cursor_row, next);
+    }
+}
+
+fn append_cursor_rect(
+    rects: &mut Vec<DirtyRect>,
+    column: u16,
+    row: u16,
+    snapshot: &RenderSnapshot,
+) {
+    if column < snapshot.columns && row < snapshot.rows {
+        append_or_extend_rect(
+            rects,
+            DirtyRect {
+                x: column,
+                y: row,
+                width: 1,
+                height: 1,
+            },
+        );
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -249,6 +289,68 @@ mod tests {
                 y: 0,
                 width: 2,
                 height: 2
+            }]
+        );
+    }
+
+    #[test]
+    fn diff_marks_previous_and_next_cursor_cells_dirty() {
+        let previous = RenderSnapshot {
+            rows: 1,
+            columns: 4,
+            cells: vec![cell("a"); 4],
+            cursor_row: 0,
+            cursor_column: 0,
+            cursor_visible: true,
+            alternate_screen: false,
+        };
+        let next = RenderSnapshot {
+            cursor_column: 2,
+            ..previous.clone()
+        };
+
+        assert_eq!(
+            previous.diff(&next),
+            vec![
+                DirtyRect {
+                    x: 0,
+                    y: 0,
+                    width: 1,
+                    height: 1,
+                },
+                DirtyRect {
+                    x: 2,
+                    y: 0,
+                    width: 1,
+                    height: 1,
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn diff_marks_cursor_visibility_change_dirty() {
+        let previous = RenderSnapshot {
+            rows: 1,
+            columns: 4,
+            cells: vec![cell("a"); 4],
+            cursor_row: 0,
+            cursor_column: 1,
+            cursor_visible: true,
+            alternate_screen: false,
+        };
+        let next = RenderSnapshot {
+            cursor_visible: false,
+            ..previous.clone()
+        };
+
+        assert_eq!(
+            previous.diff(&next),
+            vec![DirtyRect {
+                x: 1,
+                y: 0,
+                width: 1,
+                height: 1,
             }]
         );
     }

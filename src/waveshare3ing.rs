@@ -22,7 +22,7 @@ pub const PACKED_BUFFER_LEN: usize = (PANEL_WIDTH as usize * PANEL_HEIGHT as usi
 #[cfg(target_os = "linux")]
 const SPI_CHUNK_SIZE: usize = 1;
 #[cfg(target_os = "linux")]
-const STARTUP_WHITE_CLEAR_PASSES: u8 = 3;
+const STARTUP_WHITE_CLEAR_PASSES: u8 = 1;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]

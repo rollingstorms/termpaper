@@ -96,6 +96,7 @@ pub struct Epd3in0gDevice {
     reset: rppal::gpio::OutputPin,
     dc: rppal::gpio::OutputPin,
     busy: rppal::gpio::InputPin,
+    pwr: rppal::gpio::OutputPin,
     startup_white_clears_remaining: u8,
     sleeping: bool,
 }
@@ -121,18 +122,25 @@ impl Epd3in0gDevice {
             .get(24)
             .context("opening Waveshare busy pin GPIO24")?
             .into_input();
+        let mut pwr = gpio
+            .get(18)
+            .context("opening Waveshare power pin GPIO18")?
+            .into_output();
+        pwr.set_high();
 
         Ok(Self {
             spi,
             reset,
             dc,
             busy,
+            pwr,
             startup_white_clears_remaining: STARTUP_WHITE_CLEAR_PASSES,
             sleeping: false,
         })
     }
 
     pub fn init(&mut self) -> Result<()> {
+        self.pwr.set_high();
         self.sleeping = false;
         self.reset();
         self.command_with_data(0x66, &[0x49, 0x55, 0x13, 0x5D, 0x05, 0x10])?;
@@ -194,6 +202,7 @@ impl Epd3in0gDevice {
         }
         self.command_with_data(0x02, &[0x00])?;
         self.command_with_data(0x07, &[0xA5])?;
+        self.pwr.set_low();
         self.sleeping = true;
         Ok(())
     }

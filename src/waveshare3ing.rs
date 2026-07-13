@@ -33,6 +33,8 @@ pub enum Epd3in0gColor {
     Red = 3,
 }
 
+pub type ColorFrame = Vec<Epd3in0gColor>;
+
 impl Epd3in0gColor {
     pub fn repeated_byte(self) -> u8 {
         let value = self as u8;
@@ -62,6 +64,36 @@ pub fn pack_landscape_mono_frame(frame: &MonoFrame) -> Result<Vec<u8>> {
             let target_y = LANDSCAPE_WIDTH as u32 - 1 - source_x;
             let idx = (target_y as usize * PANEL_WIDTH as usize) + target_x as usize;
             unpacked[idx] = mono_pixel_to_epd_color(*frame.get_pixel(source_x, source_y)) as u8;
+        }
+    }
+
+    Ok(pack_2bpp_pixels(&unpacked))
+}
+
+pub fn new_landscape_color_frame(color: Epd3in0gColor) -> ColorFrame {
+    vec![color; LANDSCAPE_WIDTH as usize * LANDSCAPE_HEIGHT as usize]
+}
+
+pub fn pack_landscape_color_frame(frame: &[Epd3in0gColor]) -> Result<Vec<u8>> {
+    let expected_len = LANDSCAPE_WIDTH as usize * LANDSCAPE_HEIGHT as usize;
+    if frame.len() != expected_len {
+        bail!(
+            "Waveshare 3inch G color frame must be {} pixels, got {}",
+            expected_len,
+            frame.len()
+        );
+    }
+
+    let mut unpacked =
+        vec![Epd3in0gColor::White as u8; PANEL_WIDTH as usize * PANEL_HEIGHT as usize];
+
+    for source_y in 0..LANDSCAPE_HEIGHT as u32 {
+        for source_x in 0..LANDSCAPE_WIDTH as u32 {
+            let source_idx = source_y as usize * LANDSCAPE_WIDTH as usize + source_x as usize;
+            let target_x = source_y;
+            let target_y = LANDSCAPE_WIDTH as u32 - 1 - source_x;
+            let target_idx = target_y as usize * PANEL_WIDTH as usize + target_x as usize;
+            unpacked[target_idx] = frame[source_idx] as u8;
         }
     }
 
@@ -295,6 +327,18 @@ mod tests {
         assert!(packed
             .iter()
             .all(|byte| *byte == Epd3in0gColor::White.repeated_byte()));
+    }
+
+    #[test]
+    fn packs_landscape_color_frame_to_controller_buffer_size() {
+        let frame = new_landscape_color_frame(Epd3in0gColor::Red);
+
+        let packed = pack_landscape_color_frame(&frame).unwrap();
+
+        assert_eq!(packed.len(), PACKED_BUFFER_LEN);
+        assert!(packed
+            .iter()
+            .all(|byte| *byte == Epd3in0gColor::Red.repeated_byte()));
     }
 
     #[test]

@@ -69,6 +69,14 @@ Run a direct full-refresh test pattern:
 scripts/hardware-test-pi.sh text
 ```
 
+Color driver bring-up patterns are also available:
+
+```sh
+scripts/hardware-test-pi.sh red
+scripts/hardware-test-pi.sh yellow
+scripts/hardware-test-pi.sh color-quadrants
+```
+
 Run noninteractive command smoke tests through Termpaper:
 
 ```sh
@@ -77,6 +85,8 @@ scripts/command-smoke-pi.sh --display mock
 
 Use `--display waveshare` only when you want slow full-panel refreshes. Use
 `--font compact` when comparing against the denser 66 columns x 16 rows grid.
+Use `scripts/python-reference-display-pi.sh` to compare against Waveshare's
+stock Python driver when Rust output is suspect.
 
 When running interactively, `Ctrl-]` stops Termpaper locally and terminates the
 child shell. `Ctrl-C` and `Ctrl-D` are forwarded to the shell.

@@ -60,9 +60,16 @@ Available patterns:
 
 - `white`
 - `black`
+- `red`
+- `yellow`
 - `border`
 - `checkerboard`
+- `color-quadrants`
 - `text`
+
+Use `docs/waveshare-driver-port.md` when changing the low-level driver. It maps
+the Rust implementation back to Waveshare's Python/C sources and lists the
+hardware bring-up sequence.
 
 Equivalent direct command on the Pi:
 

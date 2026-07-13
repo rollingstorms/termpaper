@@ -3,7 +3,9 @@ use clap::ValueEnum;
 use image::{ImageBuffer, Luma};
 
 use crate::render::MonoFrame;
-use crate::waveshare3ing::{LANDSCAPE_HEIGHT, LANDSCAPE_WIDTH};
+use crate::waveshare3ing::{
+    new_landscape_color_frame, ColorFrame, Epd3in0gColor, LANDSCAPE_HEIGHT, LANDSCAPE_WIDTH,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 pub enum HardwareTestPattern {
@@ -12,6 +14,9 @@ pub enum HardwareTestPattern {
     Border,
     Checkerboard,
     Text,
+    Red,
+    Yellow,
+    ColorQuadrants,
 }
 
 pub fn pattern_frame(pattern: HardwareTestPattern) -> MonoFrame {
@@ -27,14 +32,36 @@ pub fn pattern_frame(pattern: HardwareTestPattern) -> MonoFrame {
         HardwareTestPattern::Border => draw_border(&mut frame),
         HardwareTestPattern::Checkerboard => draw_checkerboard(&mut frame),
         HardwareTestPattern::Text => draw_text_pattern(&mut frame),
+        HardwareTestPattern::Red
+        | HardwareTestPattern::Yellow
+        | HardwareTestPattern::ColorQuadrants => {}
     }
 
     frame
 }
 
 pub fn run_hardware_test(pattern: HardwareTestPattern) -> Result<()> {
-    let frame = pattern_frame(pattern);
-    run_waveshare_frame(&frame)
+    match pattern {
+        HardwareTestPattern::Red
+        | HardwareTestPattern::Yellow
+        | HardwareTestPattern::ColorQuadrants => {
+            let frame = color_pattern_frame(pattern);
+            run_waveshare_color_frame(&frame)
+        }
+        _ => {
+            let frame = pattern_frame(pattern);
+            run_waveshare_frame(&frame)
+        }
+    }
+}
+
+pub fn color_pattern_frame(pattern: HardwareTestPattern) -> ColorFrame {
+    match pattern {
+        HardwareTestPattern::Red => new_landscape_color_frame(Epd3in0gColor::Red),
+        HardwareTestPattern::Yellow => new_landscape_color_frame(Epd3in0gColor::Yellow),
+        HardwareTestPattern::ColorQuadrants => draw_color_quadrants(),
+        _ => new_landscape_color_frame(Epd3in0gColor::White),
+    }
 }
 
 #[cfg(target_os = "linux")]
@@ -45,8 +72,21 @@ fn run_waveshare_frame(frame: &MonoFrame) -> Result<()> {
     device.display_packed(&packed)
 }
 
+#[cfg(target_os = "linux")]
+fn run_waveshare_color_frame(frame: &[Epd3in0gColor]) -> Result<()> {
+    let packed = crate::waveshare3ing::pack_landscape_color_frame(frame)?;
+    let mut device = crate::waveshare3ing::Epd3in0gDevice::open_default()?;
+    device.init()?;
+    device.display_packed(&packed)
+}
+
 #[cfg(not(target_os = "linux"))]
 fn run_waveshare_frame(_frame: &MonoFrame) -> Result<()> {
+    anyhow::bail!("hardware tests require Linux/Raspberry Pi")
+}
+
+#[cfg(not(target_os = "linux"))]
+fn run_waveshare_color_frame(_frame: &[Epd3in0gColor]) -> Result<()> {
     anyhow::bail!("hardware tests require Linux/Raspberry Pi")
 }
 
@@ -83,6 +123,25 @@ fn draw_text_pattern(frame: &mut MonoFrame) {
     draw_block_text(frame, 24, 28, "TERMPAPER");
     draw_block_text(frame, 24, 76, "WAVESHARE 3IN G");
     draw_block_text(frame, 24, 124, "400X168 FULL REFRESH");
+}
+
+fn draw_color_quadrants() -> ColorFrame {
+    let mut frame = new_landscape_color_frame(Epd3in0gColor::White);
+    for y in 0..LANDSCAPE_HEIGHT as usize {
+        for x in 0..LANDSCAPE_WIDTH as usize {
+            let color = match (
+                x < LANDSCAPE_WIDTH as usize / 2,
+                y < LANDSCAPE_HEIGHT as usize / 2,
+            ) {
+                (true, true) => Epd3in0gColor::Black,
+                (false, true) => Epd3in0gColor::White,
+                (true, false) => Epd3in0gColor::Red,
+                (false, false) => Epd3in0gColor::Yellow,
+            };
+            frame[y * LANDSCAPE_WIDTH as usize + x] = color;
+        }
+    }
+    frame
 }
 
 fn draw_block_text(frame: &mut MonoFrame, x: u32, y: u32, text: &str) {
@@ -138,5 +197,30 @@ mod tests {
     fn black_pattern_is_all_black() {
         let frame = pattern_frame(HardwareTestPattern::Black);
         assert!(frame.pixels().all(|pixel| pixel[0] == 0));
+    }
+
+    #[test]
+    fn color_patterns_have_panel_landscape_dimensions() {
+        for pattern in [
+            HardwareTestPattern::Red,
+            HardwareTestPattern::Yellow,
+            HardwareTestPattern::ColorQuadrants,
+        ] {
+            let frame = color_pattern_frame(pattern);
+            assert_eq!(
+                frame.len(),
+                LANDSCAPE_WIDTH as usize * LANDSCAPE_HEIGHT as usize
+            );
+        }
+    }
+
+    #[test]
+    fn color_quadrants_cover_all_panel_colors() {
+        let frame = color_pattern_frame(HardwareTestPattern::ColorQuadrants);
+
+        assert!(frame.contains(&Epd3in0gColor::Black));
+        assert!(frame.contains(&Epd3in0gColor::White));
+        assert!(frame.contains(&Epd3in0gColor::Red));
+        assert!(frame.contains(&Epd3in0gColor::Yellow));
     }
 }

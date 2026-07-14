@@ -19,4 +19,8 @@ esac
 
 require_pi_config
 
-ssh "${PI_HOST}" "cd '${PI_DIR}' && cargo build ${BUILD_ARGS[*]}"
+if [[ "${#BUILD_ARGS[@]}" -gt 0 ]]; then
+  ssh "${PI_HOST}" "cd '${PI_DIR}' && cargo build ${BUILD_ARGS[*]}"
+else
+  ssh "${PI_HOST}" "cd '${PI_DIR}' && cargo build"
+fi

@@ -37,11 +37,12 @@ cargo run -- --display debug
 Attempt the Waveshare backend on Raspberry Pi hardware:
 
 ```sh
-cargo run -- --display waveshare
+cargo run -- --display waveshare --panel waveshare3-in-g
 ```
 
-The Waveshare backend currently returns a clear unsupported/not-wired error until
-SPI/GPIO integration is implemented.
+The Waveshare backend defaults to the standard terminal font for a 50 columns x
+14 rows grid on the 400 x 168 panel. Use `--font compact` for the denser 66
+columns x 16 rows grid.
 
 ## Tests
 
@@ -101,7 +102,14 @@ scripts/test-pi.sh
 scripts/install-service.sh
 scripts/restart-service.sh
 scripts/logs-pi.sh --follow
+scripts/hardware-info-pi.sh
+scripts/hardware-test-pi.sh text
+scripts/command-smoke-pi.sh --display mock
 ```
+
+In an interactive Pi session, press `Ctrl-]` to stop Termpaper locally and
+terminate the child shell. Ordinary shell controls such as `Ctrl-C` and `Ctrl-D`
+are still forwarded to the PTY.
 
 GitHub is the authoritative source repository, but rapid hardware iteration can
 use `rsync` without committing every test attempt. Commit and push meaningful

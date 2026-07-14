@@ -1,6 +1,10 @@
 pub mod config;
 pub mod display;
+pub mod hardware_test;
 pub mod input;
+pub mod panel;
 pub mod pty;
 pub mod refresh;
+pub mod render;
 pub mod terminal;
+pub mod waveshare3ing;

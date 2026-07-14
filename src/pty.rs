@@ -11,12 +11,12 @@ use portable_pty::{native_pty_system, CommandBuilder, PtySize};
 
 use crate::display::DisplayBackend;
 use crate::input::{encode_event, InputEvent, Key, KeyEvent, Modifiers};
-use crate::refresh::{RefreshPriority, RefreshScheduler};
+use crate::refresh::{coalesce_dirty_rects, RefreshPriority, RefreshScheduler};
 use crate::terminal::TerminalState;
 
 pub fn run_interactive(
-    rows: u16,
-    columns: u16,
+    mut rows: u16,
+    mut columns: u16,
     command: Option<String>,
     display: &mut dyn DisplayBackend,
 ) -> Result<()> {
@@ -30,10 +30,7 @@ pub fn run_interactive(
         })
         .context("opening PTY")?;
 
-    let shell = command
-        .or_else(|| env::var("SHELL").ok())
-        .unwrap_or_else(|| "/bin/sh".to_string());
-    let mut cmd = CommandBuilder::new(shell);
+    let mut cmd = command_builder(command);
     cmd.env("TERM", "vt100");
     cmd.env("TERMPAPER", "1");
 
@@ -66,25 +63,52 @@ pub fn run_interactive(
     enable_raw_mode().context("enabling raw keyboard mode")?;
     let raw_mode = RawModeGuard;
     let mut terminal = TerminalState::new(rows, columns);
-    let mut scheduler = RefreshScheduler::new(Duration::from_millis(250));
+    let capabilities = display.capabilities();
+    let mut scheduler = RefreshScheduler::with_policy(
+        capabilities.min_refresh_interval,
+        capabilities.high_priority_bypasses_rate_limit,
+    );
     let mut pending_dirty = Vec::new();
     let mut pending_input_feedback = false;
 
     loop {
         if event::poll(Duration::from_millis(1)).context("polling keyboard input")? {
-            if let Event::Key(key) = event::read().context("reading keyboard input")? {
-                let Some(input) = map_crossterm_key(key) else {
-                    continue;
-                };
-                if input == InputEvent::Shutdown {
-                    break;
+            match event::read().context("reading terminal event")? {
+                Event::Key(key) => {
+                    let Some(input) = map_crossterm_key(key) else {
+                        continue;
+                    };
+                    if input == InputEvent::Shutdown {
+                        child.kill().context("terminating child process")?;
+                        break;
+                    }
+                    let bytes = encode_event(&input, terminal.input_mode());
+                    if !bytes.is_empty() {
+                        writer.write_all(&bytes).context("writing input to PTY")?;
+                        writer.flush().context("flushing PTY input")?;
+                        pending_input_feedback = true;
+                    }
                 }
-                let bytes = encode_event(&input, terminal.input_mode());
-                if !bytes.is_empty() {
-                    writer.write_all(&bytes).context("writing input to PTY")?;
-                    writer.flush().context("flushing PTY input")?;
-                    pending_input_feedback = true;
+                Event::Resize(new_columns, new_rows) => {
+                    if !capabilities.honors_host_resize {
+                        continue;
+                    }
+                    columns = new_columns;
+                    rows = new_rows;
+                    pair.master
+                        .resize(PtySize {
+                            rows,
+                            cols: columns,
+                            pixel_width: 0,
+                            pixel_height: 0,
+                        })
+                        .context("resizing PTY")?;
+                    terminal.resize(rows, columns);
+                    pending_dirty.clear();
+                    pending_dirty.push(crate::refresh::DirtyRect::full(columns, rows));
+                    scheduler.record_mutation(RefreshPriority::High);
                 }
+                _ => {}
             }
         }
 
@@ -110,6 +134,7 @@ pub fn run_interactive(
         }
 
         if !pending_dirty.is_empty() && scheduler.should_refresh(Instant::now()) {
+            coalesce_dirty_rects(&mut pending_dirty);
             display.render(&terminal.snapshot(), &pending_dirty)?;
             pending_dirty.clear();
         }
@@ -120,6 +145,7 @@ pub fn run_interactive(
             .is_some()
         {
             if !pending_dirty.is_empty() {
+                coalesce_dirty_rects(&mut pending_dirty);
                 display.render(&terminal.snapshot(), &pending_dirty)?;
             }
             break;
@@ -132,12 +158,38 @@ pub fn run_interactive(
     Ok(())
 }
 
+fn command_builder(command: Option<String>) -> CommandBuilder {
+    match command {
+        Some(command) if command_contains_shell_syntax(&command) => {
+            let mut builder = CommandBuilder::new("/bin/sh");
+            builder.args(["-lc", command.as_str()]);
+            builder
+        }
+        Some(command) => CommandBuilder::new(command),
+        None => CommandBuilder::new(env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string())),
+    }
+}
+
+fn command_contains_shell_syntax(command: &str) -> bool {
+    command.chars().any(char::is_whitespace)
+        || command.chars().any(|ch| {
+            matches!(
+                ch,
+                '|' | '&' | ';' | '<' | '>' | '*' | '?' | '$' | '\'' | '"'
+            )
+        })
+}
+
 fn map_crossterm_key(key: crossterm::event::KeyEvent) -> Option<InputEvent> {
     let modifiers = Modifiers {
         control: key.modifiers.contains(KeyModifiers::CONTROL),
         alt: key.modifiers.contains(KeyModifiers::ALT),
         shift: key.modifiers.contains(KeyModifiers::SHIFT),
     };
+
+    if modifiers.control && key.code == KeyCode::Char(']') {
+        return Some(InputEvent::Shutdown);
+    }
 
     let key = match key.code {
         KeyCode::Backspace => Key::Backspace,
@@ -167,5 +219,28 @@ struct RawModeGuard;
 impl Drop for RawModeGuard {
     fn drop(&mut self) {
         let _ = disable_raw_mode();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn detects_shell_command_strings() {
+        assert!(!command_contains_shell_syntax("/bin/ls"));
+        assert!(command_contains_shell_syntax("ls -la"));
+        assert!(command_contains_shell_syntax("printf hello; true"));
+        assert!(command_contains_shell_syntax("echo $SHELL"));
+    }
+
+    #[test]
+    fn maps_control_bracket_to_local_shutdown() {
+        let input = map_crossterm_key(crossterm::event::KeyEvent::new(
+            KeyCode::Char(']'),
+            KeyModifiers::CONTROL,
+        ));
+
+        assert_eq!(input, Some(InputEvent::Shutdown));
     }
 }

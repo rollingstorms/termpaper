@@ -20,7 +20,7 @@ pub const LANDSCAPE_WIDTH: u16 = 400;
 pub const LANDSCAPE_HEIGHT: u16 = 168;
 pub const PACKED_BUFFER_LEN: usize = (PANEL_WIDTH as usize * PANEL_HEIGHT as usize) / 4;
 #[cfg(target_os = "linux")]
-const SPI_CHUNK_SIZE: usize = 1;
+const SPI_CHUNK_SIZE: usize = 4096;
 #[cfg(target_os = "linux")]
 const STARTUP_WHITE_CLEAR_PASSES: u8 = 1;
 
